@@ -12,7 +12,27 @@ CURRENT_PIN=""
 
 # === CREATE ACCOUNT ===
 create_account() {
-  USERNAME="user_$(tr -dc 'a-z0-9' </dev/urandom | head -c6)"
+  echo ""
+  echo "===[ CREATE NEW ACCOUNT ]==="
+
+  while true; do
+    echo -n "Choose a username (or press ENTER for random): "
+    read CUSTOM_NAME
+
+    if [ -z "$CUSTOM_NAME" ]; then
+      USERNAME="user_$(tr -dc 'a-z0-9' </dev/urandom | head -c6)"
+      break
+    else
+      # Vérifie si déjà pris
+      if grep -q "^$CUSTOM_NAME:" "$DB"; then
+        echo "[-] This username already exists. Try another."
+      else
+        USERNAME="$CUSTOM_NAME"
+        break
+      fi
+    fi
+  done
+
   PIN=$(shuf -i 100000-999999 -n 1)
 
   echo "$USERNAME:$PIN" >> "$DB"
@@ -21,10 +41,10 @@ create_account() {
   CURRENT_PIN="$PIN"
 
   echo ""
-  echo "===[ NEW ACCOUNT CREATED ]==="
+  echo "===[ ACCOUNT CREATED ]==="
   echo "Username: $USERNAME"
   echo "PIN     : $PIN"
-  echo "=============================="
+  echo "=========================="
   echo "[+] You are now logged in as $CURRENT_USER"
 }
 
@@ -60,10 +80,21 @@ change_account() {
   echo -n "Change username? (y/n): "
   read CHANGE_USER
   if [ "$CHANGE_USER" = "y" ]; then
-    NEWNAME="user_$(tr -dc 'a-z0-9' </dev/urandom | head -c6)"
-    sed -i "s/^$CURRENT_USER:$CURRENT_PIN\$/$NEWNAME:$CURRENT_PIN/" "$DB"
-    echo "[+] Username changed to $NEWNAME"
-    CURRENT_USER="$NEWNAME"
+    while true; do
+      echo -n "New username: "
+      read NEWNAME
+
+      if [ "$NEWNAME" = "" ]; then
+        echo "[-] Username cannot be empty."
+      elif grep -q "^$NEWNAME:" "$DB"; then
+        echo "[-] This username already exists. Try another."
+      else
+        sed -i "s/^$CURRENT_USER:$CURRENT_PIN\$/$NEWNAME:$CURRENT_PIN/" "$DB"
+        echo "[+] Username changed to $NEWNAME"
+        CURRENT_USER="$NEWNAME"
+        break
+      fi
+    done
   fi
 
   echo -n "Change PIN? (y/n): "
